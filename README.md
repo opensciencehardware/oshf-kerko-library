@@ -56,11 +56,9 @@ TUNNEL_TOKEN=your-cloudflare-tunnel-token
 
 - `TUNNEL_TOKEN`: a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/) token. See [Tunnel permissions](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/remote-tunnel-permissions/).
 
-The site is served at [library.opensciencehardware.org](https://library.opensciencehardware.org).
-
 ## How it works
 
-### How startup works
+### Startup
 
 Kerko reads `instance/config.toml` and `instance/.secrets.toml` from the `instance/` bind mount. On first start, with no search index yet, `kerkoapp` runs `flask kerko sync`. On later starts it runs `flask kerko clean index` then `flask kerko sync index`, so facet and other schema changes in `config.toml` apply. That rebuild uses the existing cache and does not contact Zotero; new items arrive with Ofelia's next sync. Ofelia's own `flask kerko sync` never cleans the index. Kerko command reference: [Synchronization](https://whiskyechobravo.github.io/kerko/latest/synchronization/).
 
@@ -80,9 +78,11 @@ Custom Jinja templates are in `instance/templates/custom/` and are wired up unde
 
 Public traffic reaches the stack through a Cloudflare Tunnel ([create a tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/), [published applications](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/routing-to-tunnel/)). Protect any admin hostname with a [Cloudflare Access application](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/) and an **Allow** [policy](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/) for approved email addresses ([identity providers](https://developers.cloudflare.com/cloudflare-one/identity/idp-integration/)).
 
+Point the public hostname at http://kerkoapp:80, and the Portainer hostname at http://portainer:9000.
+
 ### Search engines
 
-Kerko generates an XML sitemap at `https://library.opensciencehardware.org/bibliography/sitemap.xml` (see [Submitting your sitemap](https://whiskyechobravo.github.io/kerko/latest/deploying/#submitting-your-sitemap-to-search-engines)). This repository does not include a `robots.txt`; Cloudflare's [managed robots.txt](https://developers.cloudflare.com/bots/additional-configurations/managed-robots-txt/) can serve one at the edge.
+Kerko generates an XML sitemap at `https://example.com/bibliography/sitemap.xml` (see [Submitting your sitemap](https://whiskyechobravo.github.io/kerko/latest/deploying/#submitting-your-sitemap-to-search-engines)).
 
 ## Running locally
 
@@ -95,7 +95,7 @@ cp instance/.secrets.toml.example instance/.secrets.toml
 cp .env.example .env
 ```
 
-Set `SECRET_KEY` and `ZOTERO_API_KEY` as in [Configuration](#configuration); Kerko requires both even for a public library. Give `TUNNEL_TOKEN` in `.env` any placeholder value; Compose refuses to start while it is blank. To avoid syncing the whole OSHF library, point `instance/config.toml` at the public [Kerko demo library](https://www.zotero.org/groups/2348869/kerko_demo) (do not commit this):
+Set `SECRET_KEY` and `ZOTERO_API_KEY` as in [Configuration](#configuration); Kerko requires both even for a public library. Give `TUNNEL_TOKEN` in `.env` any placeholder value; Compose refuses to start while it is blank. If you don't want to use the OSHF library, point `instance/config.toml` at the public [Kerko demo library](https://www.zotero.org/groups/2348869/kerko_demo):
 
 ```toml
 ZOTERO_LIBRARY_ID = "2348869"
