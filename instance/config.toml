@@ -1,0 +1,67 @@
+ZOTERO_LIBRARY_ID = "6295764"
+ZOTERO_LIBRARY_TYPE = "group"
+
+BABEL_DEFAULT_LOCALE = "en_US"
+BABEL_DEFAULT_TIMEZONE = "UTC"
+
+[kerko.meta]
+title = "Open Science Hardware Library"
+google_analytics_id = "G-JSNMBCEHH4"
+
+[kerko.zotero]
+csl_style = "apa"
+locale = "en-US"
+
+[kerko.breadcrumb]
+enabled = false
+
+[kerko.facets.tag]
+enabled = true
+title = "Topic"
+weight = 10
+
+[kerko.facets.audience]
+enabled = true
+type = "collection"
+collection_key = "CJMWXUU7"
+filter_key = "audience"
+title = "Audience"
+weight = 20
+
+[kerko.facets.item_type]
+enabled = true
+title = "Resource Type"
+weight = 30
+
+[kerko.facets.year]
+enabled = true
+title = "Publication Year"
+weight = 40
+
+[kerko.facets.language]
+enabled = true
+title = "Resource Language"
+weight = 50
+
+[kerko.templates]
+base = "kerko/base.html.jinja2"
+layout = "custom/layout.html.jinja2"
+search = "custom/search.html.jinja2"
+search_item = "custom/search_item.html.jinja2"
+item = "custom/item.html.jinja2"
+page = "kerko/page.html.jinja2"
+atom_feed = "kerko/atom.xml.jinja2"
+
+[kerko.link_groups]
+
+[[kerko.link_groups.breadcrumb_base]]
+type = "endpoint"
+endpoint = "kerko.search"
+text = "Library"
+
+[kerkoapp.proxy_fix]
+enabled = true
+x_for = 1
+x_proto = 1
+x_host = 1
+x_prefix = 1

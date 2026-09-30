@@ -1,0 +1,125 @@
+name: oshf-kerko-library
+
+x-defaults: &defaults
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  kerkoapp:
+    <<: *defaults
+    build: .
+    container_name: kerkoapp
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        cp -f instance/static/*.png instance/static/*.webp kerkoapp/static/ 2>/dev/null || true
+        if [ ! -d instance/kerko/index ]; then
+          echo "First start: syncing Zotero library..."
+          flask kerko sync
+        else
+          # Rebuild the index so facet/schema changes apply; Ofelia's sync never cleans it.
+          echo "Rebuilding search index..."
+          flask kerko clean index
+          flask kerko sync index
+        fi
+        python /scripts/build_covers.py --force &
+        exec gunicorn --workers 1 --threads 2 --timeout 120 --graceful-timeout 120 --keep-alive 5 \
+          --worker-tmp-dir /dev/shm --access-logfile - --error-logfile - \
+          --bind 0.0.0.0:80 wsgi:app
+    volumes:
+      # Bind directories only; a missing file bind becomes an empty directory.
+      # Kerko reads instance/config.toml and instance/.secrets.toml from the first mount.
+      - ./instance:/kerkoapp/instance
+      - ./instance/templates/custom:/kerkoapp/kerkoapp/templates/custom:ro
+      - ./instance/static/covers:/kerkoapp/kerkoapp/static/covers
+      - ./scripts:/scripts:ro
+    networks: [edge]
+    labels:
+      ofelia.enabled: "true"
+      # Ofelia uses 6-field cron: sec min hour day month weekday
+      ofelia.job-exec.zotero-sync.schedule: "0 */30 * * * *"
+      ofelia.job-exec.zotero-sync.command: "flask kerko sync"
+      ofelia.job-exec.zotero-sync.no-overlap: "true"
+      ofelia.job-exec.covers.schedule: "0 5,35 * * * *"
+      ofelia.job-exec.covers.command: "python /scripts/build_covers.py"
+      ofelia.job-exec.covers.no-overlap: "true"
+
+  portainer:
+    <<: *defaults
+    image: portainer/portainer-ce:lts
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks: [edge]
+
+  # Host shell for Portainer's console. The startup command below writes two
+  # scripts into the container: `kerko-login` and `root-login`. Running one from
+  # the console opens a login shell on the server as that user, in
+  # /opt/oshf-kerko-library.
+  # nsenter joins PID 1's namespaces, which needs pid:host and privileged mode;
+  # the container itself only runs `sleep`. See "Maintenance" in the README.
+  hostshell:
+    image: alpine:3.22
+    container_name: hostshell
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+    privileged: true
+    pid: host
+    network_mode: none
+    # Commands run through hostshell stay in this container's cgroup, so this
+    # caps them at half a core and keeps the web app responsive.
+    cpus: 0.5
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        cat > /usr/local/bin/kerko-login <<'EOF'
+        #!/bin/sh
+        exec nsenter -t 1 -m -u -i -n -p -- su --pty -l kerko -c 'cd /opt/oshf-kerko-library && exec bash'
+        EOF
+        cat > /usr/local/bin/root-login <<'EOF'
+        #!/bin/sh
+        exec nsenter -t 1 -m -u -i -n -p -- su --pty -l root -c 'cd /opt/oshf-kerko-library && exec bash'
+        EOF
+        chmod +x /usr/local/bin/kerko-login /usr/local/bin/root-login
+        exec sleep infinity
+
+  cloudflared:
+    <<: *defaults
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    # Cloudflare requires --no-autoupdate in containers; update by pulling a new image (see README).
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env}
+    networks: [edge]
+
+  ofelia:
+    <<: *defaults
+    image: mcuadros/ofelia:0.3.22
+    container_name: ofelia
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [edge]
+
+volumes:
+  portainer_data:
+
+networks:
+  edge:
+    name: oshf_edge

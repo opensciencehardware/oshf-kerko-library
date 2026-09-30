@@ -1,0 +1,32 @@
+{# The record's own permanent address, shown in the "Link to this record" field on the search_item page. #}
+{% extends "kerko/item.html.jinja2" %}
+{% from "custom/_cover.html.jinja2" import cover %}
+
+{%- block item_actions %}
+  {{ super() }}
+  {%- if not item.attachments and item.url|kerko_url_hostname %}
+  <script>
+  (function () {
+    var col = document.querySelector('.item-content .row.my-2 .col-auto.ml-auto.text-right');
+    if (!col || col.querySelector('[data-oshf-view-resource]')) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'd-inline-block d-print-none mb-2';
+    wrap.setAttribute('data-oshf-view-resource', '1');
+    wrap.innerHTML = '<a class="btn btn-primary" href={{ item.url|tojson }} target="_blank" rel="noopener noreferrer"><span class="fas fa-file" aria-hidden="true"></span> View resource</a>';
+    col.insertBefore(wrap, col.firstChild);
+  })();
+  </script>
+  {%- endif %}
+{%- endblock item_actions %}
+
+{%- block content_inner %}
+<div class="oshf-item">
+  <div class="oshf-item-cover">
+    {{ cover(item, size='lg') }}
+  </div>
+  <div class="oshf-item-body">
+    {%- block oshf_item_heading %}{%- endblock %}
+    {{ super() }}
+  </div>
+</div>
+{%- endblock content_inner %}

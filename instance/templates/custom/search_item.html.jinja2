@@ -1,0 +1,56 @@
+{# Opens when you click a result card: the record, plus back to the list and previous/next. #}
+{% extends "custom/item.html.jinja2" %}
+{% from "kerko/_breadcrumb.html.jinja2" import breadcrumb %}
+{% from "kerko/_badges.html.jinja2" import badges %}
+{%- if not is_searching %}
+  {%- set search_title = "Library contents" -%}
+{%- endif %}
+
+{%- block metas %}
+  {{- super() }}
+  {%- include "kerko/_search-metas.html.jinja2" %}
+{%- endblock metas %}
+
+{%- block breadcrumb %}
+  {%- if is_searching and back_url %}
+    {{ breadcrumb([{'url': back_url, 'text': _("Your search")}, title]) }}
+  {%- else %}
+    {{ super() }}
+  {%- endif %}
+{%- endblock breadcrumb %}
+
+{%- block content_header %}
+  <div class="d-flex flex-wrap justify-content-between align-items-start mb-3">
+    <h1 class="h3 mb-2 mb-md-0">{{ search_title }}</h1>
+    {%- if back_url %}
+    <a class="btn btn-primary" href="{{ back_url }}">
+      <span class="fas fa-arrow-left" aria-hidden="true"></span> {{ _("Return to list of results") }}
+    </a>
+    {%- endif %}
+  </div>
+{%- endblock content_header %}
+
+{%- block oshf_item_heading %}
+  <h2 class="h4 mb-3">
+    {{- badges(item, mode='item') -}}
+    {{- title|kerko_richtext_escape -}}
+  </h2>
+{%- endblock oshf_item_heading %}
+
+{%- block content_inner %}
+  {%- if is_searching %}
+  <div class="mb-3">
+    {%- include "kerko/_breadbox.html.jinja2" %}
+  </div>
+  {%- endif %}
+  {%- include "kerko/_pager.html.jinja2" %}
+  {{ super() }}
+  {%- include "kerko/_pager.html.jinja2" %}
+{%- endblock content_inner %}
+
+{%- block body_scripts %}
+  {{ super() }}
+  {%- if preferred_url %}
+  <script>history.replaceState({}, "", "{{ preferred_url }}");</script>
+  {%- endif %}
+{%- endblock body_scripts %}

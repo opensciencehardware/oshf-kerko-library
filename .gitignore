@@ -1,0 +1,5 @@
+.env
+instance/.secrets.toml
+instance/kerko/
+instance/static/covers/*
+!instance/static/covers/.gitkeep

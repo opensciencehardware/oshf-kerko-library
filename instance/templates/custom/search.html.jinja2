@@ -1,0 +1,186 @@
+{# The main search page: the list of result cards. #}
+{% extends "kerko/search.html.jinja2" %}
+{% from "kerko/_badges.html.jinja2" import badges %}
+{% from "custom/_cover.html.jinja2" import cover %}
+{%- if not is_searching %}
+  {%- set title = "Library contents" -%}
+{%- endif %}
+
+{%- block meta_title_inner -%}
+{%- if is_searching -%}
+{{- super() -}}
+{%- else -%}
+{{ config.kerko.meta.title|escape }}
+{%- endif -%}
+{%- endblock meta_title_inner %}
+
+{%- macro oshf_creator_line(result) -%}
+{%- set ns = namespace(parts=[]) -%}
+{%- for c in result.data.get('creators', []) -%}
+  {%- if c.get('name') -%}
+    {%- set _ = ns.parts.append(c['name']) -%}
+  {%- elif c.get('lastName') -%}
+    {%- set name = c['lastName'] -%}
+    {%- if c.get('firstName') -%}
+      {%- set name = name ~ ', ' ~ c['firstName'] -%}
+    {%- endif -%}
+    {%- set _ = ns.parts.append(name) -%}
+  {%- endif -%}
+{%- endfor -%}
+{{- ns.parts|join('; ') -}}
+{%- endmacro %}
+
+{%- macro oshf_item_type_label(item_type) -%}
+{%- set labels = {
+  'blogPost': 'Blog Post',
+  'book': 'Book',
+  'bookSection': 'Book Section',
+  'conferencePaper': 'Conference Paper',
+  'document': 'Document',
+  'journalArticle': 'Journal Article',
+  'magazineArticle': 'Magazine Article',
+  'manuscript': 'Manuscript',
+  'newspaperArticle': 'Newspaper Article',
+  'podcast': 'Podcast',
+  'preprint': 'Preprint',
+  'report': 'Report',
+  'thesis': 'Thesis',
+  'webpage': 'Web Page',
+  'videoRecording': 'Video',
+  'presentation': 'Presentation',
+  'computerProgram': 'Software'
+} -%}
+{{- labels.get(item_type, item_type) -}}
+{%- endmacro %}
+
+{%- macro oshf_resource_url(result) -%}
+{%- set ns = namespace(url='') -%}
+{%- for attachment in result.attachments or [] -%}
+  {%- set adata = attachment['data'] if attachment['data'] is defined else {} -%}
+  {%- set ctype = adata.get('contentType', '') if adata else '' -%}
+  {%- if ctype == 'application/pdf' and not ns.url -%}
+    {%- set ns.url = url_for(
+      'kerko.child_attachment_download',
+      item_id=result.id,
+      attachment_id=attachment['id'],
+      attachment_filename=adata.get('filename', 'document.pdf')
+    ) -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if not ns.url and result.url|kerko_url_hostname -%}
+  {%- set ns.url = result.url -%}
+{%- endif -%}
+{{- ns.url -}}
+{%- endmacro %}
+
+{%- macro oshf_format_date(raw) -%}
+{%- set d = (raw or '')|trim -%}
+{%- set months = {
+  '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+  '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+  '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+} -%}
+{%- if d|length >= 7 and d[4] == '-' -%}
+  {%- set year = d[0:4] -%}
+  {%- set month_name = months.get(d[5:7], '') -%}
+  {%- if month_name %}{{ month_name }}, {{ year }}{% elif year|int(default=0) >= 1000 %}{{ year }}{% endif -%}
+{%- elif d|length >= 4 and d[0:4]|int(default=0) >= 1000 and d[0:4]|int(default=0) <= 9999 -%}
+  {{- d[0:4] -}}
+{%- endif -%}
+{%- endmacro %}
+
+{%- block content_header %}
+  <div class="my-2 row">
+    <h1 class="{% block search_heading_classes %}h2 col-auto pr-1 mr-auto d-inline{% endblock %}{% if not is_searching %} d-print-none{% endif %}">
+      {%- if is_searching %}
+        {{ _("Your search") }}
+      {%- else %}
+        {{ _("Search") }}
+      {%- endif -%}
+    </h1>
+    {%- if is_searching or facet_results %}
+    <div class="col-auto pl-0 ml-auto text-right">
+      <div class="{% block help_link_wrapper_classes %}d-inline-block d-print-none mt-1 mb-2{% endblock %}">
+        <button class="{% block help_btn_classes %}btn btn-light{% endblock %}" data-toggle="modal" data-target="#search-help">
+          <span class="fas fa-question-circle" aria-hidden="true"></span> {{ _("Help") }}
+        </button>
+      </div>
+      {%- if facet_results and search_results %}
+      <div class="{% block facets_link_wrapper_classes %}d-inline-block d-lg-none d-print-none mt-1 mb-2{% endblock %}">
+        <button id="facets-modal-toggle" class="{% block facets_btn_classes %}btn btn-primary{% endblock %}">
+          <span class="fas fa-compass" aria-hidden="true"></span> Refine by
+        </button>
+      </div>
+      {%- endif %}
+      {%- if is_searching %}
+      <div class="{% block reset_link_wrapper_classes %}d-inline-block d-print-none mt-1 mb-2{% endblock %}">
+        <a class="{% block reset_btn_classes %}btn btn-danger{% endblock %}" href="{{ url_for('kerko.search') }}">
+          <span class="fas fa-trash-alt" aria-hidden="true"></span> {{ _("Reset search") }}
+        </a>
+      </div>
+      {%- endif %}
+    </div>
+    {%- endif %}
+  </div>
+  {%- block search_help %}
+    {%- include "custom/_search-help.html.jinja2" %}
+  {%- endblock search_help %}
+{%- endblock content_header %}
+
+{%- block search_results_list %}
+<ul class="list-unstyled mb-0">
+{%- for result, result_url in search_results %}
+  {%- set creator_line = oshf_creator_line(result)|trim -%}
+  {%- set item_type = result.data.get('itemType', '') -%}
+  {%- set resource_url = oshf_resource_url(result)|trim -%}
+  {%- set resource_is_pdf = resource_url and resource_url.startswith('/') -%}
+  {%- set resource_label = 'Read document' if resource_is_pdf else 'View resource' -%}
+  {%- set date_line = oshf_format_date(result.data.get('date', ''))|trim -%}
+  <li class="oshf-result card">
+    <a class="oshf-result-link card-body" href="{{ result_url }}" title="View record">
+      <div class="oshf-result-content">
+        <div class="oshf-result-cover">
+          {{ cover(result, size='sm') }}
+        </div>
+        <div class="oshf-result-body">
+          {{- badges(result, mode='result') -}}
+          {%- if creator_line %}
+          <div class="oshf-result-author">{{ creator_line|e }}</div>
+          {%- endif %}
+          <div class="oshf-result-title">
+            {{- result.data.get('title', '')|kerko_richtext_escape -}}
+          </div>
+          {%- if date_line %}
+          <div class="oshf-result-date">{{ date_line|e }}</div>
+          {%- endif %}
+          {%- if result.coins %}{{ result.coins|safe }}{%- endif %}
+          {%- if show_abstracts and result.data['abstractNote']|trim|length %}
+          <div class="text-muted small mt-2">
+            {%- if config.kerko.features.results_abstracts_max_length > 0 %}
+              {{- result.data['abstractNote']|truncate(config.kerko.features.results_abstracts_max_length, leeway=config.kerko.features.results_abstracts_max_length_leeway)|kerko_richtext_escape|trim -}}
+            {%- else %}
+              {{- result.data['abstractNote']|kerko_richtext_escape|trim -}}
+            {%- endif %}
+          </div>
+          {%- endif %}
+        </div>
+      </div>
+    </a>
+    <div class="oshf-result-footer card-footer">
+      <div class="oshf-result-type">{{ oshf_item_type_label(item_type) }}</div>
+      <div class="oshf-result-actions">
+        {%- if resource_url and not hide_result_links %}
+        <a class="btn btn-sm btn-light text-nowrap" href="{{ resource_url|e }}"
+           {%- if not resource_is_pdf %} target="_blank" rel="noopener noreferrer"{%- endif %}>
+          <span class="fas fa-file mr-1" aria-hidden="true"></span>{{ resource_label }}
+        </a>
+        {%- endif %}
+        <a class="btn btn-sm btn-light text-nowrap" href="{{ result_url }}">
+          <span class="fas fa-align-left mr-1" aria-hidden="true"></span>View record
+        </a>
+      </div>
+    </div>
+  </li>
+{%- endfor %}
+</ul>
+{%- endblock search_results_list %}

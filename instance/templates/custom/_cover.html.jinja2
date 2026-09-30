@@ -1,0 +1,28 @@
+{# The cover picture on a result or a record, or a type icon when there is no picture. #}
+{%- macro cover(item, size='sm') -%}
+{%- set t = (item.data.itemType if item.data is defined and item.data.itemType is defined else '')|lower -%}
+{%- set label = (item.item_type_label|default(''))|lower -%}
+{%- set key = t or label -%}
+{%- if 'journal' in key or 'article' in key or 'preprint' in key %}{%- set icon = 'fa-file-alt' -%}
+{%- elif 'blog' in key %}{%- set icon = 'fa-rss' -%}
+{%- elif 'book' in key %}{%- set icon = 'fa-book' -%}
+{%- elif 'report' in key or 'thesis' in key %}{%- set icon = 'fa-file-contract' -%}
+{%- elif 'web' in key %}{%- set icon = 'fa-globe' -%}
+{%- elif 'podcast' in key or 'audio' in key %}{%- set icon = 'fa-podcast' -%}
+{%- elif 'video' in key or 'film' in key %}{%- set icon = 'fa-film' -%}
+{%- elif 'conference' in key or 'presentation' in key %}{%- set icon = 'fa-chalkboard-teacher' -%}
+{%- elif 'software' in key or 'computer' in key %}{%- set icon = 'fa-code' -%}
+{%- elif 'dataset' in key %}{%- set icon = 'fa-database' -%}
+{%- else %}{%- set icon = 'fa-file-alt' -%}
+{%- endif -%}
+<div class="oshf-cover oshf-cover-{{ size }}">
+  <img class="oshf-cover-img"
+       src="{{ url_for('static', filename='covers/' ~ item.id ~ '.jpg') }}"
+       alt=""
+       loading="lazy"
+       onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+  <div class="oshf-cover-ph" style="display:none" aria-hidden="true">
+    <i class="fas {{ icon }}"></i>
+  </div>
+</div>
+{%- endmacro %}

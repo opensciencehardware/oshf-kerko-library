@@ -1,0 +1,7 @@
+{# The help popup that opens from the Help button on the library page. #}
+{% extends "kerko/_search-help.html.jinja2" %}
+
+{%- block search_help_inner %}
+<p>For further help, please contact <a href="mailto:library@opensciencehardware.org">library@opensciencehardware.org</a>.</p>
+{{ super() }}
+{%- endblock search_help_inner %}

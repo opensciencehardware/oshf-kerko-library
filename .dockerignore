@@ -1,0 +1,3 @@
+# The Dockerfile copies nothing from the repository, so send nothing to the
+# build context. This keeps instance/kerko (cache, index, attachments) out of it.
+*
