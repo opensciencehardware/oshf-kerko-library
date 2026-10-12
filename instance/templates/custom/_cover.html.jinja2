@@ -3,10 +3,9 @@
 {%- set t = (item.data.itemType if item.data is defined and item.data.itemType is defined else '')|lower -%}
 {%- set label = (item.item_type_label|default(''))|lower -%}
 {%- set key = t or label -%}
-{%- if 'journal' in key or 'article' in key or 'preprint' in key %}{%- set icon = 'fa-file-alt' -%}
+{%- if 'journal' in key or 'article' in key or 'preprint' in key or 'report' in key or 'thesis' in key or 'conferencepaper' in key or 'conference paper' in key %}{%- set icon = 'fa-file-alt' -%}
 {%- elif 'blog' in key %}{%- set icon = 'fa-rss' -%}
 {%- elif 'book' in key %}{%- set icon = 'fa-book' -%}
-{%- elif 'report' in key or 'thesis' in key %}{%- set icon = 'fa-file-contract' -%}
 {%- elif 'web' in key %}{%- set icon = 'fa-globe' -%}
 {%- elif 'podcast' in key or 'audio' in key %}{%- set icon = 'fa-podcast' -%}
 {%- elif 'video' in key or 'film' in key %}{%- set icon = 'fa-film' -%}
